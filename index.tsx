@@ -339,7 +339,7 @@ const analyzePhoto = async () => {
     
     // 3. USA MODELLO COMPATIBILE
     const model = genAI.getGenerativeModel({ 
-  model: "gemini-1.5-pro"
+  model: "gemini-1.5-flash"  // ← Modello più leggero
 });
     
     // 4. PREPARA IMMAGINI
