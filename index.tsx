@@ -334,11 +334,13 @@ const App = () => {
       );
       
       // 2. INIZIALIZZA GOOGLE AI (CORRETTO)
-      const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GOOGLE_API_KEY || "");
+     const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GOOGLE_API_KEY || "", {
+  apiVersion: "v1"  // ← DEVE ESSERE "v1" NON "v1beta"
+});
       
       // 3. USA MODELLO STABILE
       const model = genAI.getGenerativeModel({ 
-        model: "gemini-pro-vision"
+        model: "gemini-pro"
       });
      
       // 4. PREPARA IMMAGINI
