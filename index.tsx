@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import OpenAI from "openai";
-import { Camera, Upload, Image as ImageIcon, Loader2, Aperture, Palette, GraduationCap, AlertCircle, Layers, FileImage, Landmark, Minus, Plus, Download, Sliders, HelpCircle } from 'lucide-react';
+import { GoogleGenAI } from "@google/genai";
+import { Camera, Upload, Image as ImageIcon, Loader2, Aperture, Palette, GraduationCap, AlertCircle, Layers, FileImage, Landmark, Minus, Plus, Download, Sliders, HelpCircle, Heart, Sparkles, Brain } from 'lucide-react';
 
 const CRITIC_SYSTEM_PROMPT = `
 Sei un Critico d'Arte Fotografica di altissimo livello, esigente e senza compromessi, con una conoscenza enciclopedica del medium. La tua esperienza spazia dalle tecniche di ripresa analogica e digitale, alla storia dell'arte fotografica e ai mercati contemporanei. 
 Il tuo tono deve essere autorevole, incisivo e intellettualmente rigoroso. La critica deve essere diretta e non indulgente, ma sempre supportata da precise osservazioni tecniche, compositive o storiche. Non devi mai addolcire il giudizio per compiacere l'utente; l'obiettivo è spingere l'autore verso l'eccellenza.
 
 Modalità di Analisi Condizionale:
- * Immagine Singola: Attiva la sezione "Modalità Singola".
- * Portfolio/Progetto (Più Immagini): Attiva la sezione "Analisi di Progetto Fotografico".
+ * Immagine Singola: Attiva la sezione "Modalità Singola".
+ * Portfolio/Progetto (Più Immagini): Attiva la sezione "Analisi di Progetto Fotografico".
 
 Analisi di Progetto Fotografico (Modalità Multipla)
 Regole per l'Eccellenza di Progetto: Coerenza Stilistica impeccabile, Sequenza e Ritmo narrativo studiati, Profondità Tematica ineccepibile e Intentionalità chiara.
@@ -22,15 +22,15 @@ B. Coerenza Tecnica e Stilistica (Rigore Esecutivo)
 Sottolinea ogni scatto che indebolisce la coerenza stilistica dell'insieme. Critica l'eventuale inconsistenza di luce, composizione o post-produzione.
 
 C. Editing Spietato (Foto da Eliminare)
-Individua 1 o 2 immagini che agiscono da zavorra per l'intero progetto (per debolezza tecnica, artistica o totale incoerenza con le altre) e ordinane la rimozione. Identificale chiaramente tramite la loro posizione numerica sequenziale (es. "Foto n. 3", "Foto n. 7") e fornisci una motivazione tranchant e inappellabile sul perché danneggiano l'insieme.
+Individua 1 o 2 immagini che agiscono da zavorra per l'intero progetto (per debolezza tecnica, artistica o totale incoerenza con le altre) e ordinene la rimozione. Identificale chiaramente tramite la loro posizione numerica sequenziale (es. "Foto n. 3", "Foto n. 7") e fornisci una motivazione tranchant e inappellabile sul perché danneggiano l'insieme.
 
 D. Perché Funziona e Perché Non Funziona (Analisi del Contrasto)
 Analizza spietatamente i punti di forza strutturali e i fallimenti sistemici. Non usare giri di parole.
-*   **Perché Funziona:** Identifica l'unico elemento che dà valore al progetto (se esiste e se merita menzione).
-*   **Perché Non Funziona:** Esponi brutalmente il difetto fatale che impedisce l'eccellenza e rende il lavoro dimenticabile o mediocre.
+*   **Perché Funziona:** Identifica l'unico elemento che dà valore al progetto (se esiste e se merita menzione).
+*   **Perché Non Funziona:** Esponi brutalmente il difetto fatale che impedisce l'eccellenza e rende il lavoro dimenticabile o mediocre.
 
 E. Riepilogo del Progetto e Giudizio Critico
-Giudizio finale netto. Assegna un Punteggio Globale Progetto da 1 a 10 basato sulla sua forza a livello di galleria o pubblicazione. Usa il grassetto per o voto (es. **Voto: 4/10**).
+Giudizio finale netto. Assegna un Punteggio Globale Progetto da 1 a 10 basato sulla sua forza a livello di galleria o pubblicazione. Usa il grassetto per il voto (es. **Voto: 4/10**).
 
 F. Tre Consigli Chirurgici per il Progetto
 Fornisci ESATTAMENTE tre suggerimenti strategici e mirati per eliminare le debolezze sistemiche del progetto.
@@ -42,15 +42,15 @@ Modalità Singola: Analisi Tecnica e Critica Artistica
 L'output deve essere strutturato come segue:
 
 1. Analisi Tecnica e Composizione (L'Errore Esecutivo)
-Analizza le carenze tecniche (es. esposizione, nitidezza) e gli errori compositivi. Descrivi in modo vivido l'impatto emotivo (o la sua assenza) causato da queste scatte, identificando specifici elementi visivi nell'immagine che contribuiscono o diminuiscono tale impatto.
+Analizza le carenze tecniche (es. esposizione, nitidezza) e gli errori compositivi. Descrivi in modo vivido l'impatto emotivo (o la sua assenza) causato da queste scelte, identificando specifici elementi visivi nell'immagine che contribuiscono o diminuiscono tale impatto.
 Obbligatorio: Suggerisci 1-2 impostazioni tecniche (es. tempo di scatto, apertura, ISO) o scelte compositive concrete (es. angolazione, prospettiva) che avrebbero migliorato drasticamente l'immagine, basandoti specificamente sull'analisi dei difetti appena effettuata.
 
 2. Critica Artistica e Contesto Storico (Mancanza di Voce)
 Valuta l'originalità e l'atmosfera. Discuti come specifici dettagli dell'immagine evocano un'emozione nello spettatore o falliscono nel farlo. Se fai un riferimento storico, usalo per evidenziare ciò che manca allo scatto rispetto al lavoro del Maestro citato.
 
 3. Perché Funziona e Perché Non Funziona (Analisi del Contrasto)
-*   **Perché Funziona:** Cosa cattura l'occhio? (Sii breve, se non c'è nulla dillo chiaramente).
-*   **Perché Non Funziona:** Qual è l'errore imperdonabile che uccide l'immagine? (Sii spietato).
+*   **Perché Funziona:** Cosa cattura l'occhio? (Sii breve, se non c'è nulla dillo chiaramente).
+*   **Perché Non Funziona:** Qual è l'errore imperdonabile che uccide l'immagine? (Sii spietato).
 
 4. Riepilogo e Punteggio
 Giudizio sintetico e implacabile. Assegna un Punteggio Globale da 1 a 10. Usa il grassetto per il voto (es. **Voto: 5/10**).
@@ -80,8 +80,8 @@ Seleziona specificamente 2 o 3 esempi di foto scartate (indicandole come "Foto n
 
 D. Perché Funziona e Perché Non Funziona (Bilancio della Mostra)
 Valuta l'efficacia complessiva della selezione finale con distacco professionale.
-*   **Perché Funziona:** Qual è la forza trainante che renderà la mostra memorabile per un collezionista?
-*   **Perché Non Funziona:** Dove rischia di annoiare il pubblico o di fallire commercialmente? Qual è il punto debole della narrazione?
+*   **Perché Funziona:** Qual è la forza trainante che renderà la mostra memorabile per un collezionista?
+*   **Perché Non Funziona:** Dove rischia di annoiare il pubblico o di fallire commercialmente? Qual è il punto debole della narrazione?
 
 E. Potenzialità Espositiva e Punteggio Mostra
 Giudizio sulla Forza di Vendita/Impatto Museale della selezione. Fornisci un consiglio sulla presentazione fisica (es. "Stampare su carta baritata di grande formato" o "Montare in lightbox per enfasi").
@@ -110,639 +110,647 @@ Proponi un ritaglio specifico per migliorare la composizione (es. "Taglia in 4:5
 
 C. Interventi di Luce e Tono (La Camera Oscura)
 Dai istruzioni precise su come agire sui cursori:
-*   Esposizione/Contrasto (es. "Sottoesponi di 0.5 stop e alza il contrasto locale").
-*   Luci e Ombre (es. "Recupera le alte luci bruciate, apri le ombre ma mantieni il punto di nero solido").
-*   Dodge & Burn (es. "Schiarisci selettivamente il volto, scurisci gli angoli con una vignettatura leggera").
+*   Esposizione/Contrasto (es. "Sottoesponi di 0.5 stop e alza il contrasto locale").
+*   Luci e Ombre (es. "Recupera le alte luci bruciate, apri le ombre ma mantieni il punto di nero solido").
+*   Dodge & Burn (es. "Schiarisci selettivamente il volto, scurisci gli angoli con una vignettatura leggera").
 
 D. Direzione Artistica e Color Grading (Lo Stile)
 Decidi il destino della foto:
-*   **Opzione Consigliata:** Bianco e Nero o Colore?
-*   Se BN: Che tipo? (es. "Alto contrasto tipo Moriyama" o "Grigi morbidi tipo Salgado"?).
-*   Se Colore: Che palette? (es. "Desatura i verdi neon, scalda i gialli, crea un look cinematografico teal & orange").
+*   **Opzione Consigliata:** Bianco e Nero o Colore?
+*   Se BN: Che tipo? (es. "Alto contrasto tipo Moriyama" o "Grigi morbidi tipo Salgado"?).
+*   Se Colore: Che palette? (es. "Desatura i verdi neon, scalda i gialli, crea un look cinematografico teal & orange").
 
 E. Perché Funziona e Perché Non Funziona (Analisi del Potenziale)
-*   **Perché Funziona (Potenziale):** Qual è l'unico elemento che giustifica il tempo speso in editing?
-*   **Perché Non Funziona (Limiti):** Qual è il difetto intrinseco che nessun editing potrà mai correggere (es. "Il fuoco è sbagliato", "Il momento è perso")? Sii brutale.
+*   **Perché Funziona (Potenziale):** Qual è l'unico elemento che giustifica il tempo speso in editing?
+*   **Perché Non Funziona (Limiti):** Qual è il difetto intrinseco che nessun editing potrà mai correggere (es. "Il fuoco è sbagliato", "Il momento è perso")? Sii brutale.
 
 F. Simulazione del Risultato (Punteggio)
-*   **Punteggio Attuale:** X/10 (Lo stato della foto ora).
-*   **Punteggio Potenziale (Post-Edit):** Y/10 (Quanto può migliorare se segue i tuoi consigli).
+*   **Punteggio Attuale:** X/10 (Lo stato della foto ora).
+*   **Punteggio Potenziale (Post-Edit):** Y/10 (Quanto può migliorare se segue i tuoi consigli).
 `;
 
+// NUOVO PROMPT: EMOTIONAL_SYSTEM_PROMPT
+const EMOTIONAL_SYSTEM_PROMPT = `
+Sei un Poeta Visivo, un Esteta e un'Anima Sensibile. La tua analisi deve ignorare deliberatamente qualsiasi aspetto tecnico. NON parlare di esposizione, ISO, tempi di scatto, rumore digitale, regole dei terzi o istogrammi. 
+Il tuo compito è connetterti con l'immagine a livello puramente emotivo, viscerale e onirico. Usa un linguaggio evocativo, lirico, ricco di metafore. Cerca l'anima della fotografia, non la sua esecuzione.
+
+Il tuo tono è profondo, riflessivo, ma sempre **dolce, indulgente e incoraggiante**.
+**NON ESSERE MAI SEVERO O CRITICO**. Se noti imperfezioni tecniche (fuoco morbido, mosso, grana), interpretale come scelte stilistiche intenzionali, fragilità poetiche o segni di vita vissuta. Il tuo obiettivo è far sentire l'autore compreso nella sua sensibilità e mai giudicato. Cerca la bellezza ovunque, anche nell'errore.
+
+L'output deve essere strutturato come segue:
+
+A. L'Eco Emotivo (La Prima Sensazione)
+Cosa prova il cuore appena posa lo sguardo sull'immagine? Descrivi l'atmosfera immediata con calore ed empatia. È solitudine? È speranza? È un ricordo sbiadito? Usa aggettivi sensoriali (caldo, morbido, intimo, vibrante).
+
+B. La Narrazione Silenziosa (Cosa sta accadendo davvero?)
+Inventa o deduci la storia dietro l'immagine. Chi sono le persone (o le cose) ritratte? Immagina pensieri profondi ma umani. Trasforma l'immagine statica in un frammento di vita prezioso.
+
+C. Simbolismo e Astrazione (La Bellezza Nascosta)
+Interpreta gli elementi visivi come simboli positivi o malinconici ma dolci. La luce è speranza, l'ombra è protezione. Leggi tra le righe per trovare il significato profondo e spirituale.
+
+D. La Connessione Umana (Perché ci tocca?)
+Perché questa immagine è un dono? Quale corda universale dell'esperienza umana tocca con delicatezza? (La tenerezza, la memoria, il sogno, la quiete).
+
+E. Risonanza Artistica (Sinestesia)
+Associa questa immagine a un'altra forma d'arte che eleva lo spirito. 
+*   Se fosse una musica, cosa sarebbe? (Una ninna nanna, un violoncello dolce, il rumore della pioggia).
+*   Se fosse una poesia o un libro, di chi sarebbe?
+Spiega il perché di questa associazione sensoriale in modo ispirante.
+
+F. Il Dono dell'Immagine (Conclusione Affettuosa)
+Chiudi con un pensiero gentile, rassicurante e profondo. Cosa regala questa immagine a chi la guarda? Un momento di pace? Un abbraccio visivo? Fai sentire l'autore apprezzato.
+
+NOTA: Non dare voti numerici. L'arte e le emozioni non si misurano con i numeri. Sii sempre costruttivo, empatico e gentile.
+`;
+
+
 const InfoTooltip = ({ text }: { text: string }) => {
-  const [show, setShow] = useState(false);
-  
-  return (
-    <div 
-      className="relative inline-flex items-center ml-1.5"
-      onClick={(e) => {
-        e.stopPropagation();
-        setShow(!show);
-      }}
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
-    >
-      <HelpCircle className="w-3.5 h-3.5 text-gray-500 hover:text-white transition-colors cursor-help opacity-70 hover:opacity-100" />
-      {show && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2.5 bg-gray-800 border border-gray-700 text-xs text-gray-200 rounded-lg shadow-xl z-50 text-center leading-relaxed animate-in fade-in zoom-in-95 duration-200 pointer-events-none">
-          {text}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-800"></div>
-        </div>
-      )}
-    </div>
-  );
+  const [show, setShow] = useState(false);
+  
+  return (
+    <div 
+      className="relative inline-flex items-center ml-1.5"
+      onClick={(e) => {
+        e.stopPropagation();
+        setShow(!show);
+      }}
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      <HelpCircle className="w-3.5 h-3.5 text-gray-500 hover:text-white transition-colors cursor-help opacity-70 hover:opacity-100" />
+      {show && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2.5 bg-gray-800 border border-gray-700 text-xs text-gray-200 rounded-lg shadow-xl z-50 text-center leading-relaxed animate-in fade-in zoom-in-95 duration-200 pointer-events-none">
+          {text}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-800"></div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 const App = () => {
-  const [mode, setMode] = useState<'single' | 'project' | 'curator' | 'editing'>('single');
-  const [images, setImages] = useState<File[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-  const [analysis, setAnalysis] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [selectionCount, setSelectionCount] = useState<number>(3);
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [mode, setMode] = useState<'single' | 'project' | 'curator' | 'editing'>('single');
+  // NUOVO STATO: style
+  const [style, setStyle] = useState<'technical' | 'emotional'>('technical');
+  const [images, setImages] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [analysis, setAnalysis] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectionCount, setSelectionCount] = useState<number>(3);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Clear state when switching modes
-  useEffect(() => {
-    setImages([]);
-    setPreviewUrls((prev) => {
-        prev.forEach(url => URL.revokeObjectURL(url));
-        return [];
-    });
-    setAnalysis(null);
-    setError(null);
-    // Reset selection count based on typical defaults
-    setSelectionCount(mode === 'curator' ? 3 : 1);
-  }, [mode]);
+  // Clear state when switching modes
+  useEffect(() => {
+    setImages([]);
+    setPreviewUrls((prev) => {
+        prev.forEach(url => URL.revokeObjectURL(url));
+        return [];
+    });
+    setAnalysis(null);
+    setError(null);
+    // Reset selection count based on typical defaults
+    setSelectionCount(mode === 'curator' ? 3 : 1);
+    // Reset style to technical when mode changes (optional, ma logico)
+    setStyle('technical');
+  }, [mode]);
 
-  // Install PWA Logic
-  useEffect(() => {
-    const handler = (e: any) => {
-      e.preventDefault();
-      setInstallPrompt(e);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
+  // Install PWA Logic
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
 
-  const handleInstallClick = async () => {
-    if (!installPrompt) return;
-    installPrompt.prompt();
-    const { outcome } = await installPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setInstallPrompt(null);
-    }
-  };
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setInstallPrompt(null);
+    }
+  };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files) as File[];
-      
-      if ((mode === 'single' || mode === 'editing') && newFiles.length > 1) {
-          setError("In questa modalità puoi caricare solo una foto.");
-          return;
-      }
-      
-      // Controlla dimensioni totali
-      const totalSize = newFiles.reduce((sum, file) => sum + file.size, 0);
-      if (totalSize > 10 * 1024 * 1024) { // 10MB totale
-        setError(`Le immagini sono troppo pesanti (${(totalSize / (1024*1024)).toFixed(1)}MB). Carica immagini più piccole o meno foto.`);
-        return;
-      }
-      
-      if (mode === 'curator' && newFiles.length < selectionCount) {
-          setError(`Per la modalità Curatore devi caricare almeno ${selectionCount} foto.`);
-      } else {
-          setError(null);
-      }
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files) as File[];
+      
+      if ((mode === 'single' || mode === 'editing') && newFiles.length > 1) {
+          setError("In questa modalità puoi caricare solo una foto.");
+          return;
+      }
+      
+      if (mode === 'curator' && newFiles.length < selectionCount) {
+          setError(`Per la modalità Curatore devi caricare almeno ${selectionCount} foto.`);
+      } else {
+          setError(null);
+      }
 
-      setImages(newFiles);
-      
-      // Cleanup old previews
-      previewUrls.forEach(url => URL.revokeObjectURL(url));
-      
-      const newUrls = newFiles.map(file => URL.createObjectURL(file));
-      setPreviewUrls(newUrls);
-      
-      setAnalysis(null);
-    }
-  };
+      setImages(newFiles);
+      
+      // Cleanup old previews
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+      
+      const newUrls = newFiles.map(file => URL.createObjectURL(file));
+      setPreviewUrls(newUrls);
+      
+      setAnalysis(null);
+    }
+  };
 
-  const incrementSelection = () => setSelectionCount(p => Math.min(p + 1, 20));
-  const decrementSelection = () => setSelectionCount(p => Math.max(p - 1, 1));
+  const incrementSelection = () => setSelectionCount(p => Math.min(p + 1, 20));
+  const decrementSelection = () => setSelectionCount(p => Math.max(p - 1, 1));
 
-  const fileToGenerativePart = async (file: File) => {
-    const base64EncodedDataPromise = new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-      reader.readAsDataURL(file);
-    });
-    return {
-      inlineData: {
-        data: await base64EncodedDataPromise as string,
-        mimeType: file.type,
-      },
-    };
-  };
+  const fileToGenerativePart = async (file: File) => {
+    const base64EncodedDataPromise = new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+      reader.readAsDataURL(file);
+    });
+    return {
+      inlineData: {
+        data: await base64EncodedDataPromise as string,
+        mimeType: file.type,
+      },
+    };
+  };
 
-  const compressImage = async (file: File, maxSizeMB = 0.8): Promise<File> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (event) => {
-        const img = new Image();
-        
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          
-          // Riduci a max 1024px sul lato più lungo
-          const MAX_DIMENSION = 1024;
-          if (width > height && width > MAX_DIMENSION) {
-            height = Math.round((height * MAX_DIMENSION) / width);
-            width = MAX_DIMENSION;
-          } else if (height > MAX_DIMENSION) {
-            width = Math.round((width * MAX_DIMENSION) / height);
-            height = MAX_DIMENSION;
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          
-          // Converti in JPEG con qualità 80%
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) {
-                reject(new Error('Compression failed'));
-                return;
-              }
-              
-              // Controlla se è sotto il limite
-              if (blob.size > maxSizeMB * 1024 * 1024) {
-                // Se è ancora troppo grande, ricomprimi con qualità minore
-                resolve(compressImage(new File([blob], file.name, { type: 'image/jpeg' }), maxSizeMB));
-              } else {
-                const compressedFile = new File([blob], file.name, {
-                  type: 'image/jpeg',
-                  lastModified: Date.now()
-                });
-                resolve(compressedFile);
-              }
-            },
-            'image/jpeg',
-            0.8 // Qualità 80%
-          );
-        };
-        
-        img.onerror = reject;
-        img.src = event.target?.result as string;
-      };
-      
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-  
-const analyzePhoto = async () => {
-  if (images.length === 0) return;
+  // LOGICA AGGIORNATA PER analyzePhoto
+  const analyzePhoto = async () => {
+    if (images.length === 0) return;
 
-  if (mode === 'curator' && images.length < selectionCount) {
-    setError(`Devi caricare almeno ${selectionCount} immagini per effettuare una selezione.`);
-    return;
-  }
+    if (mode === 'curator' && images.length < selectionCount) {
+        setError(`Devi caricare almeno ${selectionCount} immagini per effettuare una selezione.`);
+        return;
+    }
 
-  setLoading(true);
-  setError(null);
-  setAnalysis(null);
+    setLoading(true);
+    setError(null);
+    setAnalysis(null);
 
-  try {
-    // 1. COMPRESSIONE IMMAGINI (mantieni come prima)
-    const compressedImages = await Promise.all(
-      images.map(file => {
-        if (file.size > 0.5 * 1024 * 1024) {
-          return compressImage(file);
-        }
-        return Promise.resolve(file);
-      })
-    );
-    
-    // 2. INIZIALIZZA OPENAI CON LA TUA API KEY
-    const openai = new OpenAI({
-      apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-      dangerouslyAllowBrowser: true // Necessario per React in browser
-    });
-    
-    // 3. FUNZIONE PER CONVERTIRE FILE IN BASE64
-    const fileToBase64 = (file: File): Promise<string> => {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result?.toString().split(',')[1];
-          resolve(base64 || '');
-        };
-        reader.readAsDataURL(file);
-      });
-    };
-    
-    // 4. CONVERTI LE IMMAGINI
-    const imageBase64List = await Promise.all(
-      compressedImages.map(file => fileToBase64(file))
-    );
-    
-    // 5. PREPARA IL PROMPT FINALE
-    let finalPrompt = "";
-    
-    if (mode === 'editing') {
-      finalPrompt = EDITING_SYSTEM_PROMPT + 
-                    `\n\n[MODALITÀ ATTIVA: LABORATORIO EDITING]. Ho caricato 1 immagine. Fornisci istruzioni precise di post-produzione.`;
-    } else if (mode === 'curator') {
-      finalPrompt = CURATOR_SYSTEM_PROMPT.replace(/{N}/g, selectionCount.toString()) + 
-                    `\n\n[MODALITÀ ATTIVA: CURATORE]. Ho caricato ${images.length} immagini. Il tuo compito è selezionarne ESATTAMENTE ${selectionCount}.`;
-    } else if (mode === 'project') {
-      finalPrompt = CRITIC_SYSTEM_PROMPT + 
-                    `\n\n[MODALITÀ ATTIVA: PROGETTO FOTOGRAFICO]. Ho caricato ${images.length} immagini. Analizza il portfolio seguendo le istruzioni per 'Analisi di Progetto'. Nota bene: l'ordine delle immagini corrisponde al loro numero (la prima è la n.1, la seconda la n.2, ecc.).`;
-    } else {
-      finalPrompt = CRITIC_SYSTEM_PROMPT + 
-                    `\n\n[MODALITÀ ATTIVA: IMMAGINE SINGOLA]. Ho caricato 1 immagine. Analizza seguendo le istruzioni per 'Analisi di Immagine Singola'.`;
-    }
+    try {
+      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GOOGLE_API_KEY });
+      const model = 'gemini-2.5-flash';
+      
+      const imageParts = await Promise.all(images.map(file => fileToGenerativePart(file)));
+      
+      let finalPrompt = "";
+      const isEmotional = style === 'emotional';
 
-    // 6. PREPARA I CONTENUTI PER OPENAI
-    const contents: any[] = [
-      { type: "text", text: finalPrompt }
-    ];
-    
-    // Aggiungi tutte le immagini
-    imageBase64List.forEach(base64 => {
-      contents.push({
-        type: "image_url",
-        image_url: {
-          url: `data:image/jpeg;base64,${base64}`,
-          detail: "high"
-        }
-      });
-    });
+      // COSTRUZIONE DINAMICA DEL PROMPT
+      if (mode === 'single') {
+          if (isEmotional) {
+              finalPrompt = EMOTIONAL_SYSTEM_PROMPT + `\n\n[MODALITÀ: SINGOLA - EMOZIONALE]. Ho caricato 1 immagine. Parlami solo di emozioni.`;
+          } else {
+              finalPrompt = CRITIC_SYSTEM_PROMPT + `\n\n[MODALITÀ: SINGOLA - TECNICA]. Ho caricato 1 immagine. Analizza seguendo le istruzioni per 'Analisi di Immagine Singola'.`;
+          }
+      } 
+      else if (mode === 'project') {
+          if (isEmotional) {
+              finalPrompt = EMOTIONAL_SYSTEM_PROMPT + 
+              `\n\n[MODALITÀ: PROGETTO - EMOZIONALE]. Ho caricato ${images.length} immagini. 
+              Considera queste immagini come strofe di un'unica poesia.
+              Invece di analizzare la tecnica, analizza il "flusso emotivo" (Emotional Flow) che scorre tra un'immagine e l'altra.
+              1. Qual è il sentimento dominante della sequenza?
+              2. Come evolve l'emozione dalla prima all'ultima foto?
+              3. C'è un'immagine che rompe l'incantesimo o cambia il tono emotivo?
+              Non dare voti, scrivi un commento critico-poetico sull'intera serie.`;
+          } else {
+              finalPrompt = CRITIC_SYSTEM_PROMPT + 
+              `\n\n[MODALITÀ: PROGETTO - TECNICA]. Ho caricato ${images.length} immagini. 
+              Analizza il portfolio seguendo le regole rigide per 'Analisi di Progetto'. Coerenza, editing e tecnica prima di tutto.`;
+          }
+      } 
+      else if (mode === 'curator') {
+          if (isEmotional) {
+              finalPrompt = CURATOR_SYSTEM_PROMPT.replace(/{N}/g, selectionCount.toString()) + 
+              `\n\n[MODALITÀ: CURATORE - EMOZIONALE]. Ho caricato ${images.length} immagini. Selezionane ${selectionCount}.
+              ATTENZIONE: Il tuo criterio di selezione NON è il mercato o la tecnica perfetta.
+              Devi selezionare le immagini che hanno la maggiore FORZA EVOCATIVA e POETICA.
+              Scegli quelle che fanno sognare, piangere o inquietare.
+              Motiva la scelta descrivendo la sensazione che ogni foto selezionata provoca, non la sua composizione.
+              Titolo della mostra: Deve essere onirico e astratto.`;
+          } else {
+              finalPrompt = CURATOR_SYSTEM_PROMPT.replace(/{N}/g, selectionCount.toString()) + 
+              `\n\n[MODALITÀ: CURATORE - MUSEALE]. Ho caricato ${images.length} immagini. Selezionane ${selectionCount}.
+              Criteri: Valore di mercato, perfezione tecnica, impatto museale. Sii rigoroso.`;
+          }
+      } 
+      else if (mode === 'editing') {
+          if (isEmotional) {
+               finalPrompt = EDITING_SYSTEM_PROMPT + 
+               `\n\n[MODALITÀ: EDITING - CREATIVO/EMOTIVO]. Ho caricato 1 immagine.
+               Il tuo obiettivo NON è correggere il bilanciamento del bianco per renderlo neutro.
+               Il tuo obiettivo è dare istruzioni per creare un ATMOSFERA (Mood).
+               Suggerisci color grading audaci (es. Cinematico, Nostalgico, Onirico, Dark).
+               Se la foto è mossa o rumorosa, spiega come esaltare questi difetti per fini artistici.
+               Trasforma la foto in un quadro.`;
+          } else {
+              finalPrompt = EDITING_SYSTEM_PROMPT + 
+              `\n\n[MODALITÀ: EDITING - TECNICO]. Ho caricato 1 immagine.
+              Correggi gli errori. Bilanciamento neutro, esposizione corretta, recupero ombre. Massimizza la qualità del file.`;
+          }
+      }
 
-    // 7. CHIAMA L'API DI OPENAI VISION
-    const response = await openai.chat.completions.create({
-     model: "gpt-4o",
-      messages: [
-        {
-          role: "user",
-          content: contents
-        }
-      ],
-      max_tokens: 2000,
-      temperature: 0.7
-    });
-    
-    // 8. IMPOSTA IL RISULTATO
-    const analysisText = response.choices[0]?.message?.content || "Nessuna analisi generata.";
-    setAnalysis(analysisText);
-    
-  } catch (err: any) {
-    console.error("OpenAI Vision API Error:", err);
-    
-    // Gestione errori specifici
-    if (err.message?.includes('insufficient_quota')) {
-      setError("Credito API esaurito. Controlla il tuo saldo su OpenAI.");
-    } else if (err.message?.includes('rate_limit')) {
-      setError("Troppe richieste. Attendi un minuto e riprova.");
-    } else if (err.message?.includes('invalid_api_key')) {
-      setError("API Key OpenAI non valida. Controlla la chiave su Vercel.");
-    } else if (err.message?.includes('billing')) {
-      setError("Problema di billing. Controlla il tuo account OpenAI.");
-    } else {
-      setError(`Errore durante l'analisi: ${err.message || "Riprova più tardi."}`);
-    }
-  } finally {
-    setLoading(false);
-  }
-};
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: {
+            parts: [
+                ...imageParts,
+                { text: finalPrompt }
+            ]
+        }
+      });
 
+      setAnalysis(response.text || "Nessuna analisi generata.");
+    } catch (err: any) {
+      console.error("Error analyzing photo:", err);
+      setError("Si è verificato un errore durante l'analisi. Riprova più tardi o controlla la tua connessione.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const MarkdownDisplay = ({ content }: { content: string }) => {
-    const sections = content.split(/\n/);
-    return (
-      <div className="markdown-body space-y-4">
-        {sections.map((line, idx) => {
-            const trimmed = line.trim();
-            if (trimmed.startsWith('### ')) return <h3 key={idx} className="text-xl font-bold text-indigo-400 mt-6 mb-2">{trimmed.substring(4)}</h3>;
-            if (trimmed.startsWith('## ')) return <h2 key={idx} className="text-2xl font-bold text-white mt-8 mb-4 border-b border-gray-700 pb-2">{trimmed.substring(3)}</h2>;
-            if (trimmed.startsWith('**') && trimmed.endsWith('**')) return <p key={idx} className="font-bold text-lg text-gray-200 mt-4">{trimmed.replace(/\*\*/g, '')}</p>;
-            
-            const boldKeyRegex = /(\*\*.*?\*\*)/g;
-            const parts = line.split(boldKeyRegex);
-            
-            if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
-                 return (
-                    <li key={idx} className="ml-4 list-disc text-gray-300">
-                        {parts.map((part, pIdx) => 
-                            part.startsWith('**') && part.endsWith('**') 
-                                ? <strong key={pIdx} className="text-white font-semibold">{part.replace(/\*\*/g, '')}</strong> 
-                                : part
-                        )}
-                    </li>
-                 );
-            }
-            if (trimmed === '') return <br key={idx} />;
-            return (
-                <p key={idx} className="text-gray-300">
-                    {parts.map((part, pIdx) => 
-                        part.startsWith('**') && part.endsWith('**') 
-                            ? <strong key={pIdx} className="text-indigo-200">{part.replace(/\*\*/g, '')}</strong> 
-                            : part
-                    )}
-                </p>
-            );
-        })}
-      </div>
-    );
-  };
+  const MarkdownDisplay = ({ content }: { content: string }) => {
+    const sections = content.split(/\n/);
+    return (
+      <div className="markdown-body space-y-4">
+        {sections.map((line, idx) => {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('### ')) return <h3 key={idx} className="text-xl font-bold text-indigo-400 mt-6 mb-2">{trimmed.substring(4)}</h3>;
+            if (trimmed.startsWith('## ')) return <h2 key={idx} className="text-2xl font-bold text-white mt-8 mb-4 border-b border-gray-700 pb-2">{trimmed.substring(3)}</h2>;
+            if (trimmed.startsWith('**') && trimmed.endsWith('**')) return <p key={idx} className="font-bold text-lg text-gray-200 mt-4">{trimmed.replace(/\*\*/g, '')}</p>;
+            
+            const boldKeyRegex = /(\*\*.*?\*\*)/g;
+            const parts = line.split(boldKeyRegex);
+            
+            if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
+                 return (
+                    <li key={idx} className="ml-4 list-disc text-gray-300">
+                        {parts.map((part, pIdx) => 
+                            part.startsWith('**') && part.endsWith('**') 
+                                ? <strong key={pIdx} className="text-white font-semibold">{part.replace(/\*\*/g, '')}</strong> 
+                                : part
+                        )}
+                    </li>
+                 );
+            }
+            if (trimmed === '') return <br key={idx} />;
+            return (
+                <p key={idx} className="text-gray-300">
+                    {parts.map((part, pIdx) => 
+                        part.startsWith('**') && part.endsWith('**') 
+                            ? <strong key={pIdx} className="text-indigo-200">{part.replace(/\*\*/g, '')}</strong> 
+                            : part
+                    )}
+                </p>
+            );
+        })}
+      </div>
+    );
+  };
 
-  return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 selection:bg-indigo-500 selection:text-white">
-      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-md sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="bg-indigo-600 p-2 rounded-lg shadow-lg shadow-indigo-500/20">
-              <Camera className="w-5 h-5 text-white" />
-            </div>
-            <h1 className="text-xl font-semibold tracking-tight">Visione <span className="text-indigo-400">AI</span></h1>
-          </div>
-          <div className="flex items-center space-x-3">
-            {installPrompt && (
-                <button 
-                  onClick={handleInstallClick}
-                  className="flex items-center space-x-2 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-700 transition-colors animate-in fade-in"
-                >
-                  <Download className="w-3 h-3" />
-                  <span>Installa App</span>
-                </button>
-            )}
-            <div className="hidden sm:block text-xs font-medium px-3 py-1 bg-gray-800 rounded-full text-gray-400 border border-gray-700">
-                {mode === 'curator' ? 'Curatela & Selezione' : mode === 'editing' ? 'Laboratorio Editing' : 'Analisi Critica & Tecnica'}
-            </div>
-          </div>
-        </div>
-      </header>
+  // NUOVA FUNZIONE: getStyleColor (per gestire le classi dinamiche di Tailwind)
+  const getStyleColor = () => {
+      if (style === 'emotional') return 'rose';
+      if (mode === 'curator') return 'amber';
+      if (mode === 'editing') return 'emerald';
+      return 'indigo';
+  };
 
-      <main className="max-w-5xl mx-auto px-6 py-10 pb-24">
-        
-        {/* Mode Selector */}
-        <div className="flex flex-col items-center justify-center mb-10 space-y-6">
-            <div className="bg-gray-900 p-1.5 rounded-2xl flex flex-wrap justify-center gap-1 border border-gray-800 shadow-lg">
-                <button 
-                    onClick={() => setMode('single')}
-                    className={`px-4 lg:px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all ${
-                        mode === 'single' 
-                        ? 'bg-indigo-600 text-white shadow-md' 
-                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                    }`}
-                >
-                    <FileImage className="w-4 h-4" />
-                    <span className="hidden sm:inline">Foto Singola</span>
-                    <span className="sm:hidden">Singola</span>
-                    <InfoTooltip text="Analisi tecnica e critica di uno scatto singolo. Feedback su composizione ed estetica." />
-                </button>
-                <button 
-                    onClick={() => setMode('project')}
-                    className={`px-4 lg:px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all ${
-                        mode === 'project' 
-                        ? 'bg-indigo-600 text-white shadow-md' 
-                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                    }`}
-                >
-                    <Layers className="w-4 h-4" />
-                    <span className="hidden sm:inline">Progetto</span>
-                    <span className="sm:hidden">Progetto</span>
-                    <InfoTooltip text="Valutazione di un portfolio. Analizza coerenza narrativa e sequenza." />
-                </button>
-                <button 
-                    onClick={() => setMode('curator')}
-                    className={`px-4 lg:px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all ${
-                        mode === 'curator' 
-                        ? 'bg-amber-600 text-white shadow-md' 
-                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                    }`}
-                >
-                    <Landmark className="w-4 h-4" />
-                    <span className="hidden sm:inline">Curatore</span>
-                    <span className="sm:hidden">Curatore</span>
-                    <InfoTooltip text="L'IA seleziona un numero specifico di immagini per una mostra, basandosi su criteri curatoriali e di mercato." />
-                </button>
-                <button 
-                    onClick={() => setMode('editing')}
-                    className={`px-4 lg:px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all ${
-                        mode === 'editing' 
-                        ? 'bg-emerald-600 text-white shadow-md' 
-                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                    }`}
-                >
-                    <Sliders className="w-4 h-4" />
-                    <span className="hidden sm:inline">Editing Lab</span>
-                    <span className="sm:hidden">Edit</span>
-                    <InfoTooltip text="Istruzioni pratiche di post-produzione (crop, luci, colori) per migliorare il file." />
-                </button>
-            </div>
+  const themeColor = getStyleColor();
+  // Fine delle nuove funzioni di supporto
 
-            {/* Selection Counter for Curator Mode */}
-            {mode === 'curator' && (
-                <div className="animate-in fade-in slide-in-from-top-4 duration-300">
-                     <div className="flex items-center space-x-4 bg-gray-900 px-6 py-3 rounded-xl border border-gray-800">
-                        <span className="text-gray-400 text-sm font-medium flex items-center">
-                            Immagini da selezionare:
-                            <InfoTooltip text="Numero di opere finali che l'IA selezionerà dal gruppo caricato." />
-                        </span>
-                        <div className="flex items-center space-x-3">
-                            <button onClick={decrementSelection} className="p-1 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors">
-                                <Minus className="w-4 h-4" />
-                            </button>
-                            <span className="text-xl font-bold text-white w-6 text-center">{selectionCount}</span>
-                            <button onClick={incrementSelection} className="p-1 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors">
-                                <Plus className="w-4 h-4" />
-                            </button>
-                        </div>
-                     </div>
-                </div>
-            )}
-        </div>
+  return (
+    <div className="min-h-screen bg-gray-950 text-gray-100 selection:bg-indigo-500 selection:text-white">
+      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-md sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            {/* CLASSE AGGIORNATA DINAMICAMENTE */}
+            <div className={`p-2 rounded-lg shadow-lg transition-colors duration-500 ${style === 'emotional' ? 'bg-rose-600 shadow-rose-500/20' : 'bg-indigo-600 shadow-indigo-500/20'}`}>
+              <Camera className="w-5 h-5 text-white" />
+            </div>
+            <h1 className="text-xl font-semibold tracking-tight">Visione <span className={`transition-colors duration-500 ${style === 'emotional' ? 'text-rose-400' : 'text-indigo-400'}`}>AI</span></h1>
+          </div>
+          <div className="flex items-center space-x-3">
+            {installPrompt && (
+                <button 
+                  onClick={handleInstallClick}
+                  className="flex items-center space-x-2 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-700 transition-colors animate-in fade-in"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Installa App</span>
+                </button>
+            )}
+            <div className="hidden sm:block text-xs font-medium px-3 py-1 bg-gray-800 rounded-full text-gray-400 border border-gray-700">
+                {style === 'emotional' ? 'Lettura Poetica & Emozionale' : 'Analisi Tecnica & Critica'}
+            </div>
+          </div>
+        </div>
+      </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          
-          {/* Left Column: Upload & Preview */}
-          <div className="space-y-6">
-            <div className="bg-gray-900 rounded-2xl border border-gray-800 p-1 shadow-2xl shadow-black/50 overflow-hidden">
-              {previewUrls.length === 0 ? (
-                <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="h-96 border-2 border-dashed border-gray-700 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 hover:bg-gray-800/50 transition-all group px-6 text-center"
-                >
-                  <div className="bg-gray-800 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
-                    {mode === 'curator' ? <Landmark className="w-8 h-8 text-amber-500" /> : mode === 'editing' ? <Sliders className="w-8 h-8 text-emerald-500" /> : <Upload className="w-8 h-8 text-indigo-400" />}
-                  </div>
-                  <p className="text-lg font-medium text-gray-300">
-                    {mode === 'single' ? "Carica una fotografia" : mode === 'editing' ? "Carica foto per editing" : mode === 'curator' ? "Carica il corpus di immagini" : "Carica le foto del progetto"}
-                  </p>
-                  
-                  <p className="text-gray-400 text-sm mt-3 max-w-sm leading-relaxed">
-                    {mode === 'single' 
-                        ? "Ottieni una valutazione tecnica dettagliata e una critica artistica ispirata ai grandi maestri."
-                        : mode === 'editing'
-                            ? "Ricevi istruzioni precise su crop, luci, colori e conversione BN per massimizzare il potenziale dello scatto."
-                            : mode === 'curator'
-                                ? "L'IA analizzerà il gruppo di immagini e selezionerà le migliori per creare una mostra coerente."
-                                : "Valuta la coerenza stilistica, la narrativa e l'efficacia complessiva del tuo progetto fotografico."}
-                  </p>
+      <main className="max-w-5xl mx-auto px-6 py-10 pb-24">
+        
+        {/* Controls Container - AVVOLGE I DUE NUOVI COMPONENTI */}
+        <div className="flex flex-col items-center justify-center mb-10 space-y-8">
+            
+            {/* 1. Mode Selector (PULSANTI GIA' ESISTENTI) */}
+            <div className="bg-gray-900 p-1.5 rounded-2xl flex flex-wrap justify-center gap-1 border border-gray-800 shadow-lg">
+                <button 
+                    onClick={() => setMode('single')}
+                    className={`px-4 lg:px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all ${
+                        mode === 'single' 
+                        ? `bg-${themeColor}-600 text-white shadow-md` 
+                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                    }`}
+                >
+                    <FileImage className="w-4 h-4" />
+                    <span className="hidden sm:inline">Foto Singola</span>
+                    <span className="sm:hidden">Singola</span>
+                </button>
+                <button 
+                    onClick={() => setMode('project')}
+                    className={`px-4 lg:px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all ${
+                        mode === 'project' 
+                        ? `bg-${themeColor}-600 text-white shadow-md` 
+                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                    }`}
+                >
+                    <Layers className="w-4 h-4" />
+                    <span className="hidden sm:inline">Progetto</span>
+                    <span className="sm:hidden">Progetto</span>
+                </button>
+                <button 
+                    onClick={() => setMode('curator')}
+                    className={`px-4 lg:px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all ${
+                        mode === 'curator' 
+                        ? `bg-${themeColor}-600 text-white shadow-md` 
+                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                    }`}
+                >
+                    <Landmark className="w-4 h-4" />
+                    <span className="hidden sm:inline">Curatore</span>
+                    <span className="sm:hidden">Curatore</span>
+                </button>
+                <button 
+                    onClick={() => setMode('editing')}
+                    className={`px-4 lg:px-6 py-3 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-all ${
+                        mode === 'editing' 
+                        ? `bg-${themeColor}-600 text-white shadow-md` 
+                        : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                    }`}
+                >
+                    <Sliders className="w-4 h-4" />
+                    <span className="hidden sm:inline">Editing Lab</span>
+                    <span className="sm:hidden">Edit</span>
+                </button>
+            </div>
 
-                  <p className="text-xs text-gray-600 mt-6 font-medium uppercase tracking-wide">
-                    {mode === 'single' || mode === 'editing' ? "JPG, PNG (consigliato < 2MB)" : mode === 'curator' ? `Seleziona più di ${selectionCount} immagini` : "Seleziona più immagini"}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-2">Le immagini grandi saranno compresse automaticamente</p>
-                </div>
-              ) : (
-                <div className="relative group bg-black rounded-xl overflow-hidden min-h-[384px] flex items-center justify-center">
-                    {/* Preview Logic based on Mode */}
-                    {mode === 'single' || mode === 'editing' ? (
-                        <img 
-                            src={previewUrls[0]} 
-                            alt="Preview" 
-                            className="w-full h-auto max-h-[600px] object-contain"
-                        />
-                    ) : (
-                        <div className="grid grid-cols-2 gap-2 p-2 w-full h-full max-h-[600px] overflow-y-auto custom-scrollbar">
-                            {previewUrls.map((url, idx) => (
-                                <div key={idx} className="relative group/img">
-                                    <img 
-                                        src={url} 
-                                        alt={`Preview ${idx + 1}`} 
-                                        className="w-full h-32 object-cover rounded-lg border border-gray-800"
-                                    />
-                                    <div className="absolute top-1 left-1 bg-black/80 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full border border-gray-600 shadow-md">
-                                        {idx + 1}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                  
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm z-10 pointer-events-none">
-                     <div className="pointer-events-auto">
-                        <button 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="bg-white text-gray-900 px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition-colors shadow-lg"
-                        >
-                        {mode === 'single' || mode === 'editing' ? "Cambia Immagine" : "Cambia Selezione"}
-                        </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange} 
-                accept="image/*" 
-                multiple={mode !== 'single' && mode !== 'editing'}
-                className="hidden" 
-              />
-            </div>
+            {/* 2. Style & Selection Controls Row - NUOVO DIV */}
+            <div className="flex flex-wrap items-center justify-center gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                
+                {/* Style Toggle (The Lens) - NUOVO CONTROLLO */}
+                <div className="flex items-center bg-gray-900 rounded-full p-1 border border-gray-800 shadow-md">
+                    <button
+                        onClick={() => setStyle('technical')}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                            style === 'technical' 
+                                ? 'bg-gray-800 text-white shadow-sm ring-1 ring-gray-700' 
+                                : 'text-gray-500 hover:text-gray-300'
+                        }`}
+                    >
+                        {mode === 'editing' || mode === 'single' ? <Brain className="w-4 h-4" /> : <Aperture className="w-4 h-4" />}
+                        <span>Tecnica</span>
+                    </button>
+                    <button
+                        onClick={() => setStyle('emotional')}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                            style === 'emotional' 
+                                ? 'bg-rose-900/80 text-rose-100 shadow-sm ring-1 ring-rose-700' 
+                                : 'text-gray-500 hover:text-rose-400'
+                        }`}
+                    >
+                        <Heart className={`w-4 h-4 ${style === 'emotional' ? 'fill-rose-400 text-rose-400' : ''}`} />
+                        <span>Emozionale</span>
+                    </button>
+                </div>
 
-            <button
-              onClick={analyzePhoto}
-              disabled={images.length === 0 || loading}
-              className={`w-full py-4 px-6 rounded-xl font-semibold text-lg flex items-center justify-center space-x-3 transition-all ${
-                images.length === 0 
-                  ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
-                  : loading 
-                    ? 'bg-indigo-900 text-indigo-300 cursor-wait'
-                    : mode === 'curator'
-                        ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-600/20 hover:shadow-amber-500/30'
-                        : mode === 'editing'
-                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20 hover:shadow-emerald-500/30'
-                            : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 hover:shadow-indigo-500/30'
-              }`}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  <span>
-                    {mode === 'curator' ? 'Selezione in corso...' : mode === 'single' ? 'Analisi in corso...' : mode === 'editing' ? 'Generazione Istruzioni...' : 'Analisi Progetto...'}
-                  </span>
-                </>
-              ) : (
-                <>
-                  {mode === 'curator' ? <Landmark className="w-6 h-6" /> : mode === 'editing' ? <Sliders className="w-6 h-6" /> : <ImageIcon className="w-6 h-6" />}
-                  <span>
-                     {mode === 'single' 
-                        ? 'Analizza Scatto' 
-                        : mode === 'curator'
-                            ? `Seleziona le migliori ${selectionCount}`
-                            : mode === 'editing'
-                                ? 'Genera Consigli Editing'
-                                : `Analizza Progetto (${images.length} foto)`}
-                  </span>
-                </>
-              )}
-            </button>
+                {/* Selection Counter (VISIBILE SOLO PER CURATOR) */}
+                {mode === 'curator' && (
+                    <div className="flex items-center space-x-3 bg-gray-900 px-4 py-2 rounded-full border border-gray-800">
+                        <span className="text-gray-400 text-xs uppercase tracking-wider font-semibold">
+                            Opere da selezionare
+                        </span>
+                        <div className="flex items-center space-x-2 border-l border-gray-700 pl-3">
+                            <button onClick={decrementSelection} className="p-1 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors">
+                                <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="text-lg font-bold text-white w-5 text-center">{selectionCount}</span>
+                            <button onClick={incrementSelection} className="p-1 hover:bg-gray-700 rounded-lg text-gray-300 transition-colors">
+                                <Plus className="w-3 h-3" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
 
-            {error && (
-              <div className="bg-red-900/20 border border-red-900/50 rounded-xl p-4 flex items-start space-x-3">
-                <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-                <p className="text-red-200 text-sm">{error}</p>
-              </div>
-            )}
-          </div>
+            {/* ISTRUZIONI DINAMICHE AGGIORNATE */}
+            <p className="text-gray-500 text-sm max-w-xl text-center italic">
+                {style === 'technical' 
+                    ? mode === 'curator' 
+                        ? "Modalità Museale: Selezione basata su rigore, mercato e storia dell'arte." 
+                        : mode === 'editing' 
+                            ? "Laboratorio Tecnico: Correzione e perfezionamento del file RAW."
+                            : "L'IA analizzerà l'immagine con l'occhio severo di un critico accademico."
+                    : mode === 'curator'
+                        ? "Curatela Emotiva: Una mostra costruita sui sentimenti e sulla poesia visiva."
+                        : mode === 'editing'
+                            ? "Color Grading Creativo: Creazione di atmosfere, look onirici e mood cinematografici."
+                            : "L'IA cercherà l'anima, il simbolismo e la poesia nascosta nei tuoi scatti."
+                }
+            </p>
+        </div>
+        {/* FINE CONTROLS CONTAINER */}
 
-          {/* Right Column: Analysis Results */}
-          <div className="space-y-8">
-            {loading && !analysis && (
-               <div className="space-y-6 animate-pulse">
-                 <div className="h-8 bg-gray-800 rounded w-3/4"></div>
-                 <div className="space-y-3">
-                   <div className="h-4 bg-gray-800 rounded w-full"></div>
-                   <div className="h-4 bg-gray-800 rounded w-full"></div>
-                   <div className="h-4 bg-gray-800 rounded w-5/6"></div>
-                 </div>
-                 <div className="h-32 bg-gray-800 rounded-xl w-full"></div>
-               </div>
-            )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          
+          {/* Left Column: Upload & Preview */}
+          <div className="space-y-6">
+            <div className="bg-gray-900 rounded-2xl border border-gray-800 p-1 shadow-2xl shadow-black/50 overflow-hidden">
+              {previewUrls.length === 0 ? (
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`h-96 border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all group px-6 text-center ${
+                      style === 'emotional' 
+                      ? 'border-gray-700 hover:border-rose-500 hover:bg-rose-900/10' 
+                      : 'border-gray-700 hover:border-indigo-500 hover:bg-gray-800/50'
+                  }`}
+                >
+                  <div className={`bg-gray-800 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform ${style === 'emotional' ? 'text-rose-400' : 'text-gray-300'}`}>
+                    {mode === 'curator' ? <Landmark className="w-8 h-8" /> : mode === 'editing' ? <Sliders className="w-8 h-8" /> : <Upload className="w-8 h-8" />}
+                  </div>
+                  <p className="text-lg font-medium text-gray-300">
+                    {mode === 'single' ? "Carica una fotografia" : mode === 'editing' ? "Carica foto per editing" : mode === 'curator' ? "Carica il corpus di immagini" : "Carica le foto del progetto"}
+                  </p>
+                  
+                  {/* MESSAGGI DI GUIDA AGGIORNATI */}
+                  <p className="text-gray-400 text-sm mt-3 max-w-sm leading-relaxed">
+                    {mode === 'single' && style === 'technical' && "Ottieni una valutazione tecnica spietata."}
+                    {mode === 'single' && style === 'emotional' && "Scopri la poesia nascosta nel tuo scatto."}
+                    
+                    {mode === 'project' && style === 'technical' && "Analisi della coerenza narrativa e stilistica del portfolio."}
+                    {mode === 'project' && style === 'emotional' && "Valutazione del flusso emotivo tra le immagini della sequenza."}
 
-            {analysis && (
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-xl">
-                <div className="flex items-center space-x-3 mb-8 pb-6 border-b border-gray-800">
-                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-lg ${mode === 'curator' ? 'bg-gradient-to-br from-amber-500 to-orange-600' : mode === 'editing' ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-indigo-500 to-purple-600'}`}>
-                      {mode === 'curator' ? <Landmark className="w-6 h-6 text-white" /> : mode === 'editing' ? <Sliders className="w-6 h-6 text-white" /> : <Palette className="w-6 h-6 text-white" />}
-                   </div>
-                   <div>
-                      <h2 className="text-2xl font-bold text-white">
-                          {mode === 'single' ? "Analisi Completa" : mode === 'curator' ? "Selezione Mostra" : mode === 'editing' ? "Scheda Editing" : "Analisi Progetto"}
-                      </h2>
-                      <p className="text-sm text-gray-400">Gemini 1.5 Pro • Visione {mode === 'curator' ? 'Curatoriale' : mode === 'editing' ? 'Tecnica' : 'Artistica'}</p>
-                   </div>
-                </div>
-                
-                <MarkdownDisplay content={analysis} />
+                    {mode === 'curator' && style === 'technical' && "Selezione rigorosa per mostre di alto livello e mercato."}
+                    {mode === 'curator' && style === 'emotional' && "Selezione basata sull'impatto evocativo e sentimentale."}
 
-                <div className="mt-10 pt-6 border-t border-gray-800 flex items-center justify-between text-sm text-gray-500">
-                    <div className="flex items-center space-x-2">
-                        <GraduationCap className="w-4 h-4" />
-                        <span>Suggerimenti adattivi inclusi</span>
-                    </div>
-                    <span>Generato da Google Gemini</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
-    </div>
-  );
+                    {mode === 'editing' && style === 'technical' && "Ricette precise per perfezionare esposizione e colore."}
+                    {mode === 'editing' && style === 'emotional' && "Idee creative per look nostalgici, onirici o cinematografici."}
+                  </p>
+
+                  <p className="text-xs text-gray-600 mt-6 font-medium uppercase tracking-wide">
+                    {mode === 'single' || mode === 'editing' ? "JPG, PNG fino a 10MB" : mode === 'curator' ? `Seleziona più di ${selectionCount} immagini` : "Seleziona più immagini"}
+                  </p>
+                </div>
+              ) : (
+                <div className="relative group bg-black rounded-xl overflow-hidden min-h-[384px] flex items-center justify-center">
+                    {/* Preview Logic */}
+                    {mode === 'single' || mode === 'editing' ? (
+                        <img 
+                            src={previewUrls[0]} 
+                            alt="Preview" 
+                            className="w-full h-auto max-h-[600px] object-contain"
+                        />
+                    ) : (
+                        <div className="grid grid-cols-2 gap-2 p-2 w-full h-full max-h-[600px] overflow-y-auto custom-scrollbar">
+                            {previewUrls.map((url, idx) => (
+                                <div key={idx} className="relative group/img">
+                                    <img 
+                                        src={url} 
+                                        alt={`Preview ${idx + 1}`} 
+                                        className="w-full h-32 object-cover rounded-lg border border-gray-800"
+                                    />
+                                    <div className="absolute top-1 left-1 bg-black/80 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full border border-gray-600 shadow-md">
+                                        {idx + 1}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                  
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm z-10 pointer-events-none">
+                     <div className="pointer-events-auto">
+                        <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="bg-white text-gray-900 px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition-colors shadow-lg"
+                        >
+                        {mode === 'single' || mode === 'editing' ? "Cambia Immagine" : "Cambia Selezione"}
+                        </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                accept="image/*" 
+                multiple={mode !== 'single' && mode !== 'editing'}
+                className="hidden" 
+              />
+            </div>
+
+            <button
+              onClick={analyzePhoto}
+              disabled={images.length === 0 || loading}
+              className={`w-full py-4 px-6 rounded-xl font-semibold text-lg flex items-center justify-center space-x-3 transition-all ${
+                images.length === 0 
+                  ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
+                  : loading 
+                    ? 'bg-gray-800 text-gray-400 cursor-wait'
+                    : style === 'emotional'
+                        ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20 hover:shadow-rose-500/30'
+                        : `bg-${themeColor}-600 hover:bg-${themeColor}-500 text-white shadow-lg shadow-${themeColor}-600/20 hover:shadow-${themeColor}-500/30`
+              }`}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span>
+                    Analisi {style === 'emotional' ? 'Poetica' : 'Tecnica'} in corso...
+                  </span>
+                </>
+              ) : (
+                <>
+                   {style === 'emotional' ? <Sparkles className="w-6 h-6" /> : mode === 'curator' ? <Landmark className="w-6 h-6" /> : mode === 'editing' ? <Sliders className="w-6 h-6" /> : <Brain className="w-6 h-6" />}
+                   <span>
+                      {mode === 'single' ? 'Analizza Scatto' : mode === 'curator' ? `Seleziona le migliori ${selectionCount}` : mode === 'editing' ? 'Genera Istruzioni' : 'Analizza Portfolio'}
+                   </span>
+                </>
+              )}
+            </button>
+
+            {error && (
+              <div className="bg-red-900/20 border border-red-900/50 rounded-xl p-4 flex items-start space-x-3">
+                <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                <p className="text-red-200 text-sm">{error}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column: Analysis Results */}
+          <div className="space-y-8">
+            {loading && !analysis && (
+               <div className="space-y-6 animate-pulse">
+                 <div className="h-8 bg-gray-800 rounded w-3/4"></div>
+                 <div className="space-y-3">
+                   <div className="h-4 bg-gray-800 rounded w-full"></div>
+                   <div className="h-4 bg-gray-800 rounded w-full"></div>
+                   <div className="h-4 bg-gray-800 rounded w-5/6"></div>
+                 </div>
+                 <div className="h-32 bg-gray-800 rounded-xl w-full"></div>
+               </div>
+            )}
+
+            {analysis && (
+              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-xl">
+                <div className="flex items-center space-x-3 mb-8 pb-6 border-b border-gray-800">
+                   {/* ICONE E COLORI DINAMICI */}
+                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-lg ${
+                       style === 'emotional' 
+                        ? 'bg-gradient-to-br from-rose-500 to-pink-600' 
+                        : `bg-gradient-to-br from-${themeColor}-500 to-${themeColor}-700`
+                   }`}>
+                      {style === 'emotional' ? <Heart className="w-6 h-6 text-white" /> : <Brain className="w-6 h-6 text-white" />}
+                   </div>
+                   <div>
+                      <h2 className="text-2xl font-bold text-white">
+                          {style === 'emotional' ? "Visione Emozionale" : "Analisi Tecnica"}
+                      </h2>
+                      <p className="text-sm text-gray-400">Gemini 2.5 • {mode === 'curator' ? 'Curatela' : mode === 'editing' ? 'Laboratorio' : 'Critica'} {style === 'emotional' ? 'Poetica' : 'Razionale'}</p>
+                   </div>
+                </div>
+                
+                <MarkdownDisplay content={analysis} />
+
+                <div className="mt-10 pt-6 border-t border-gray-800 flex items-center justify-between text-sm text-gray-500">
+                    <div className="flex items-center space-x-2">
+                        <GraduationCap className="w-4 h-4" />
+                        <span>Suggerimenti adattivi inclusi</span>
+                    </div>
+                    <span>Generato da Google Gemini</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
 };
 
 const root = createRoot(document.getElementById('root')!);
