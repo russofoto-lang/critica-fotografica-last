@@ -337,8 +337,11 @@ const App = () => {
       const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GOOGLE_API_KEY });
       
       // 3. USA MODELLO PIÙ STABILE
-      const model = 'gemini-1.5-flash'; // Cambiato da gemini-2.5-flash
-      
+      const model = genAI.getGenerativeModel({ 
+  model: "gemini-1.5-pro"  // O "gemini-pro"
+});
+
+     
       // 4. PREPARA IMMAGINI
       const imageParts = await Promise.all(compressedImages.map(file => fileToGenerativePart(file)));
       
@@ -713,3 +716,5 @@ const App = () => {
 
 const root = createRoot(document.getElementById('root')!);
 root.render(<App />);
+
+
