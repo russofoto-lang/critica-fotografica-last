@@ -333,14 +333,14 @@ const analyzePhoto = async () => {
     );
     
     // 2. INIZIALIZZA GOOGLE AI CON API VERSION v1
-    const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GOOGLE_API_KEY || "", {
-      apiVersion: "v1"  // ← FORZA v1
-    });
+  const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GOOGLE_API_KEY || "", {
+  apiVersion: "v1beta"
+});
     
     // 3. USA MODELLO COMPATIBILE
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.0-pro"  // ← MODELLO PER v1
-    });
+  model: "gemini-1.5-pro"
+});
     
     // 4. PREPARA IMMAGINI
     const imageParts = await Promise.all(compressedImages.map(file => fileToGenerativePart(file)));
