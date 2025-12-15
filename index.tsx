@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 import { Camera, Upload, Image as ImageIcon, Loader2, Aperture, Palette, GraduationCap, AlertCircle, Layers, FileImage, Landmark, Minus, Plus, Download, Sliders, HelpCircle } from 'lucide-react';
 
 const CRITIC_SYSTEM_PROMPT = `
@@ -322,7 +322,7 @@ const analyzePhoto = async () => {
   setAnalysis(null);
 
   try {
-    // 1. COMPRESSIONE IMMAGINI
+    // 1. COMPRESSIONE IMMAGINI (mantieni come prima)
     const compressedImages = await Promise.all(
       images.map(file => {
         if (file.size > 0.5 * 1024 * 1024) {
@@ -332,20 +332,30 @@ const analyzePhoto = async () => {
       })
     );
     
-    // 2. INIZIALIZZA GOOGLE AI CON API VERSION v1
-  const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GOOGLE_API_KEY || "", {
-  apiVersion: "v1beta"
-});
+    // 2. INIZIALIZZA OPENAI CON LA TUA API KEY
+    const openai = new OpenAI({
+      apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+      dangerouslyAllowBrowser: true // Necessario per React in browser
+    });
     
-    // 3. USA MODELLO COMPATIBILE
-    const model = genAI.getGenerativeModel({ 
-  model: "gemini-1.5-flash"  // ← Modello più leggero
-});
+    // 3. FUNZIONE PER CONVERTIRE FILE IN BASE64
+    const fileToBase64 = (file: File): Promise<string> => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result?.toString().split(',')[1];
+          resolve(base64 || '');
+        };
+        reader.readAsDataURL(file);
+      });
+    };
     
-    // 4. PREPARA IMMAGINI
-    const imageParts = await Promise.all(compressedImages.map(file => fileToGenerativePart(file)));
+    // 4. CONVERTI LE IMMAGINI
+    const imageBase64List = await Promise.all(
+      compressedImages.map(file => fileToBase64(file))
+    );
     
-    // 5. PREPARA PROMPT
+    // 5. PREPARA IL PROMPT FINALE
     let finalPrompt = "";
     
     if (mode === 'editing') {
@@ -362,37 +372,59 @@ const analyzePhoto = async () => {
                     `\n\n[MODALITÀ ATTIVA: IMMAGINE SINGOLA]. Ho caricato 1 immagine. Analizza seguendo le istruzioni per 'Analisi di Immagine Singola'.`;
     }
 
-    // 6. ATTENDI 1 SECONDO
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // 6. PREPARA I CONTENUTI PER OPENAI
+    const contents: any[] = [
+      { type: "text", text: finalPrompt }
+    ];
+    
+    // Aggiungi tutte le immagini
+    imageBase64List.forEach(base64 => {
+      contents.push({
+        type: "image_url",
+        image_url: {
+          url: `data:image/jpeg;base64,${base64}`,
+          detail: "high"
+        }
+      });
+    });
 
-    // 7. CHIAMA L'API
-    const result = await model.generateContent([
-      ...imageParts,
-      { text: finalPrompt }
-    ]);
-    
-    const response = await result.response;
-    const text = response.text();
-    
-    setAnalysis(text || "Nessuna analisi generata.");
-  } catch (err: any) {
-    console.error("Google AI Error:", {
-      message: err.message,
-      status: err.status,
-      details: err.details
+    // 7. CHIAMA L'API DI OPENAI VISION
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-vision-preview", // Modello che supporta immagini
+      messages: [
+        {
+          role: "user",
+          content: contents
+        }
+      ],
+      max_tokens: 2000,
+      temperature: 0.7
     });
     
-    if (err.message?.includes('404')) {
-      setError(`Modello Gemini non disponibile con la tua API key. Controlla i permessi su Google AI Studio.`);
-    } else if (err.message?.includes('API Key')) {
-      setError("Chiave API mancante o non valida. Controlla le variabili d'ambiente su Vercel.");
+    // 8. IMPOSTA IL RISULTATO
+    const analysisText = response.choices[0]?.message?.content || "Nessuna analisi generata.";
+    setAnalysis(analysisText);
+    
+  } catch (err: any) {
+    console.error("OpenAI Vision API Error:", err);
+    
+    // Gestione errori specifici
+    if (err.message?.includes('insufficient_quota')) {
+      setError("Credito API esaurito. Controlla il tuo saldo su OpenAI.");
+    } else if (err.message?.includes('rate_limit')) {
+      setError("Troppe richieste. Attendi un minuto e riprova.");
+    } else if (err.message?.includes('invalid_api_key')) {
+      setError("API Key OpenAI non valida. Controlla la chiave su Vercel.");
+    } else if (err.message?.includes('billing')) {
+      setError("Problema di billing. Controlla il tuo account OpenAI.");
     } else {
-      setError(`Errore API: ${err.message || "Riprova più tardi."}`);
+      setError(`Errore durante l'analisi: ${err.message || "Riprova più tardi."}`);
     }
   } finally {
     setLoading(false);
   }
 };
+
 
   const MarkdownDisplay = ({ content }: { content: string }) => {
     const sections = content.split(/\n/);
@@ -715,6 +747,7 @@ const analyzePhoto = async () => {
 
 const root = createRoot(document.getElementById('root')!);
 root.render(<App />);
+
 
 
 
