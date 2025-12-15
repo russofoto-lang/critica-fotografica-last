@@ -309,93 +309,90 @@ const App = () => {
     });
   };
   
-  const analyzePhoto = async () => {
-    if (images.length === 0) return;
+const analyzePhoto = async () => {
+  if (images.length === 0) return;
 
-    if (mode === 'curator' && images.length < selectionCount) {
-        setError(`Devi caricare almeno ${selectionCount} immagini per effettuare una selezione.`);
-        return;
+  if (mode === 'curator' && images.length < selectionCount) {
+    setError(`Devi caricare almeno ${selectionCount} immagini per effettuare una selezione.`);
+    return;
+  }
+
+  setLoading(true);
+  setError(null);
+  setAnalysis(null);
+
+  try {
+    // 1. COMPRESSIONE IMMAGINI
+    const compressedImages = await Promise.all(
+      images.map(file => {
+        if (file.size > 0.5 * 1024 * 1024) {
+          return compressImage(file);
+        }
+        return Promise.resolve(file);
+      })
+    );
+    
+    // 2. INIZIALIZZA GOOGLE AI CON API VERSION v1
+    const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GOOGLE_API_KEY || "", {
+      apiVersion: "v1"  // ← FORZA v1
+    });
+    
+    // 3. USA MODELLO COMPATIBILE
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.0-pro"  // ← MODELLO PER v1
+    });
+    
+    // 4. PREPARA IMMAGINI
+    const imageParts = await Promise.all(compressedImages.map(file => fileToGenerativePart(file)));
+    
+    // 5. PREPARA PROMPT
+    let finalPrompt = "";
+    
+    if (mode === 'editing') {
+      finalPrompt = EDITING_SYSTEM_PROMPT + 
+                    `\n\n[MODALITÀ ATTIVA: LABORATORIO EDITING]. Ho caricato 1 immagine. Fornisci istruzioni precise di post-produzione.`;
+    } else if (mode === 'curator') {
+      finalPrompt = CURATOR_SYSTEM_PROMPT.replace(/{N}/g, selectionCount.toString()) + 
+                    `\n\n[MODALITÀ ATTIVA: CURATORE]. Ho caricato ${images.length} immagini. Il tuo compito è selezionarne ESATTAMENTE ${selectionCount}.`;
+    } else if (mode === 'project') {
+      finalPrompt = CRITIC_SYSTEM_PROMPT + 
+                    `\n\n[MODALITÀ ATTIVA: PROGETTO FOTOGRAFICO]. Ho caricato ${images.length} immagini. Analizza il portfolio seguendo le istruzioni per 'Analisi di Progetto'. Nota bene: l'ordine delle immagini corrisponde al loro numero (la prima è la n.1, la seconda la n.2, ecc.).`;
+    } else {
+      finalPrompt = CRITIC_SYSTEM_PROMPT + 
+                    `\n\n[MODALITÀ ATTIVA: IMMAGINE SINGOLA]. Ho caricato 1 immagine. Analizza seguendo le istruzioni per 'Analisi di Immagine Singola'.`;
     }
 
-    setLoading(true);
-    setError(null);
-    setAnalysis(null);
+    // 6. ATTENDI 1 SECONDO
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    try {
-      // 1. COMPRESSIONE IMMAGINI
-      const compressedImages = await Promise.all(
-        images.map(file => {
-          // Comprimi solo se > 0.5MB
-          if (file.size > 0.5 * 1024 * 1024) {
-            return compressImage(file);
-          }
-          return Promise.resolve(file);
-        })
-      );
-      
-      // 2. INIZIALIZZA GOOGLE AI (CORRETTO)
-   const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GOOGLE_API_KEY || "", {
-  apiVersion: "v1"
-});
-
-      
-      // 3. USA MODELLO STABILE
-      const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.0-pro"
-      });
-     
-      // 4. PREPARA IMMAGINI
-      const imageParts = await Promise.all(compressedImages.map(file => fileToGenerativePart(file)));
-      
-      // 5. PREPARA PROMPT
-      let finalPrompt = "";
-      
-      if (mode === 'editing') {
-          finalPrompt = EDITING_SYSTEM_PROMPT + 
-                        `\n\n[MODALITÀ ATTIVA: LABORATORIO EDITING]. Ho caricato 1 immagine. Fornisci istruzioni precise di post-produzione.`;
-      } else if (mode === 'curator') {
-          finalPrompt = CURATOR_SYSTEM_PROMPT.replace(/{N}/g, selectionCount.toString()) + 
-                        `\n\n[MODALITÀ ATTIVA: CURATORE]. Ho caricato ${images.length} immagini. Il tuo compito è selezionarne ESATTAMENTE ${selectionCount}.`;
-      } else if (mode === 'project') {
-          finalPrompt = CRITIC_SYSTEM_PROMPT + 
-                        `\n\n[MODALITÀ ATTIVA: PROGETTO FOTOGRAFICO]. Ho caricato ${images.length} immagini. Analizza il portfolio seguendo le istruzioni per 'Analisi di Progetto'. Nota bene: l'ordine delle immagini corrisponde al loro numero (la prima è la n.1, la seconda la n.2, ecc.).`;
-      } else {
-          finalPrompt = CRITIC_SYSTEM_PROMPT + 
-                        `\n\n[MODALITÀ ATTIVA: IMMAGINE SINGOLA]. Ho caricato 1 immagine. Analizza seguendo le istruzioni per 'Analisi di Immagine Singola'.`;
-      }
-
-      // 6. ATTENDI 1 SECONDO PER EVITARE RATE LIMIT
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // 7. CHIAMA L'API CORRETTAMENTE
-      const result = await model.generateContent([
-        ...imageParts,
-        { text: finalPrompt }
-      ]);
-      
-      const response = await result.response;
-      const text = response.text();
-      
-      setAnalysis(text || "Nessuna analisi generata.");
-    } catch (err: any) {
-      console.error("Error analyzing photo:", err);
-      
-      // Gestione errori specifici
-      if (err.message?.includes('503') || err.message?.includes('overloaded')) {
-        setError("Il servizio AI è temporaneamente sovraccarico. Riprova tra 30 secondi.");
-      } else if (err.message?.includes('429')) {
-        setError("Troppe richieste in poco tempo. Attendi un minuto e riprova.");
-      } else if (err.message?.includes('API Key')) {
-        setError("Problema con la chiave API. Controlla le variabili d'ambiente su Vercel.");
-      } else if (err.message?.includes('NOT_FOUND')) {
-        setError("Il modello Gemini non è disponibile. Prova a cambiare modello in 'gemini-pro'.");
-      } else {
-        setError(`Si è verificato un errore: ${err.message || "Riprova più tardi."}`);
-      }
-    } finally {
-      setLoading(false);
+    // 7. CHIAMA L'API
+    const result = await model.generateContent([
+      ...imageParts,
+      { text: finalPrompt }
+    ]);
+    
+    const response = await result.response;
+    const text = response.text();
+    
+    setAnalysis(text || "Nessuna analisi generata.");
+  } catch (err: any) {
+    console.error("Google AI Error:", {
+      message: err.message,
+      status: err.status,
+      details: err.details
+    });
+    
+    if (err.message?.includes('404')) {
+      setError(`Modello Gemini non disponibile con la tua API key. Controlla i permessi su Google AI Studio.`);
+    } else if (err.message?.includes('API Key')) {
+      setError("Chiave API mancante o non valida. Controlla le variabili d'ambiente su Vercel.");
+    } else {
+      setError(`Errore API: ${err.message || "Riprova più tardi."}`);
     }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
   const MarkdownDisplay = ({ content }: { content: string }) => {
     const sections = content.split(/\n/);
@@ -718,6 +715,7 @@ const App = () => {
 
 const root = createRoot(document.getElementById('root')!);
 root.render(<App />);
+
 
 
 
