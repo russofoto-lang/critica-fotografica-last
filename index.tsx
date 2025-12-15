@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Camera, Upload, Image as ImageIcon, Loader2, Aperture, Palette, GraduationCap, AlertCircle, Layers, FileImage, Landmark, Minus, Plus, Download, Sliders, HelpCircle } from 'lucide-react';
 
 const CRITIC_SYSTEM_PROMPT = `
@@ -333,14 +333,13 @@ const App = () => {
         })
       );
       
-      // 2. INIZIALIZZA GOOGLE AI
-      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GOOGLE_API_KEY });
+      // 2. INIZIALIZZA GOOGLE AI (CORRETTO)
+      const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GOOGLE_API_KEY || "");
       
-      // 3. USA MODELLO PIÙ STABILE
+      // 3. USA MODELLO STABILE
       const model = genAI.getGenerativeModel({ 
-  model: "gemini-1.5-pro"  // O "gemini-pro"
-});
-
+        model: "gemini-1.5-pro"
+      });
      
       // 4. PREPARA IMMAGINI
       const imageParts = await Promise.all(compressedImages.map(file => fileToGenerativePart(file)));
@@ -365,18 +364,16 @@ const App = () => {
       // 6. ATTENDI 1 SECONDO PER EVITARE RATE LIMIT
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // 7. CHIAMA L'API
-      const response = await ai.models.generateContent({
-        model: model,
-        contents: {
-            parts: [
-                ...imageParts,
-                { text: finalPrompt }
-            ]
-        }
-      });
-
-      setAnalysis(response.text || "Nessuna analisi generata.");
+      // 7. CHIAMA L'API CORRETTAMENTE
+      const result = await model.generateContent([
+        ...imageParts,
+        { text: finalPrompt }
+      ]);
+      
+      const response = await result.response;
+      const text = response.text();
+      
+      setAnalysis(text || "Nessuna analisi generata.");
     } catch (err: any) {
       console.error("Error analyzing photo:", err);
       
@@ -387,8 +384,10 @@ const App = () => {
         setError("Troppe richieste in poco tempo. Attendi un minuto e riprova.");
       } else if (err.message?.includes('API Key')) {
         setError("Problema con la chiave API. Controlla le variabili d'ambiente su Vercel.");
+      } else if (err.message?.includes('NOT_FOUND')) {
+        setError("Il modello Gemini non è disponibile. Prova a cambiare modello in 'gemini-pro'.");
       } else {
-        setError("Si è verificato un errore durante l'analisi. Riprova più tardi o controlla la tua connessione.");
+        setError(`Si è verificato un errore: ${err.message || "Riprova più tardi."}`);
       }
     } finally {
       setLoading(false);
@@ -692,7 +691,7 @@ const App = () => {
                       <h2 className="text-2xl font-bold text-white">
                           {mode === 'single' ? "Analisi Completa" : mode === 'curator' ? "Selezione Mostra" : mode === 'editing' ? "Scheda Editing" : "Analisi Progetto"}
                       </h2>
-                      <p className="text-sm text-gray-400">Gemini 1.5 Flash • Visione {mode === 'curator' ? 'Curatoriale' : mode === 'editing' ? 'Tecnica' : 'Artistica'}</p>
+                      <p className="text-sm text-gray-400">Gemini 1.5 Pro • Visione {mode === 'curator' ? 'Curatoriale' : mode === 'editing' ? 'Tecnica' : 'Artistica'}</p>
                    </div>
                 </div>
                 
@@ -716,5 +715,3 @@ const App = () => {
 
 const root = createRoot(document.getElementById('root')!);
 root.render(<App />);
-
-
