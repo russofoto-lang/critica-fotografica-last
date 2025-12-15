@@ -338,7 +338,7 @@ const App = () => {
       
       // 3. USA MODELLO STABILE
       const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash"
+        model: "gemini-pro-vision"
       });
      
       // 4. PREPARA IMMAGINI
@@ -715,5 +715,6 @@ const App = () => {
 
 const root = createRoot(document.getElementById('root')!);
 root.render(<App />);
+
 
 
