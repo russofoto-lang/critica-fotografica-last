@@ -390,7 +390,7 @@ const analyzePhoto = async () => {
 
     // 7. CHIAMA L'API DI OPENAI VISION
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+     model: "gpt-4o",
       messages: [
         {
           role: "user",
