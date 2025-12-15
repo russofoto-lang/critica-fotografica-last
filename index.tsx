@@ -30,7 +30,7 @@ Analizza spietatamente i punti di forza strutturali e i fallimenti sistemici. No
 *   **Perché Non Funziona:** Esponi brutalmente il difetto fatale che impedisce l'eccellenza e rende il lavoro dimenticabile o mediocre.
 
 E. Riepilogo del Progetto e Giudizio Critico
-Giudizio finale netto. Assegna un Punteggio Globale Progetto da 1 a 10 basato sulla sua forza a livello di galleria o pubblicazione. Usa il grassetto per il voto (es. **Voto: 4/10**).
+Giudizio finale netto. Assegna un Punteggio Globale Progetto da 1 a 10 basato sulla sua forza a livello di galleria o pubblicazione. Usa il grassetto per o voto (es. **Voto: 4/10**).
 
 F. Tre Consigli Chirurgici per il Progetto
 Fornisci ESATTAMENTE tre suggerimenti strategici e mirati per eliminare le debolezze sistemiche del progetto.
@@ -42,7 +42,7 @@ Modalità Singola: Analisi Tecnica e Critica Artistica
 L'output deve essere strutturato come segue:
 
 1. Analisi Tecnica e Composizione (L'Errore Esecutivo)
-Analizza le carenze tecniche (es. esposizione, nitidezza) e gli errori compositivi. Descrivi in modo vivido l'impatto emotivo (o la sua assenza) causato da queste scelte, identificando specifici elementi visivi nell'immagine che contribuiscono o diminuiscono tale impatto.
+Analizza le carenze tecniche (es. esposizione, nitidezza) e gli errori compositivi. Descrivi in modo vivido l'impatto emotivo (o la sua assenza) causato da queste scatte, identificando specifici elementi visivi nell'immagine che contribuiscono o diminuiscono tale impatto.
 Obbligatorio: Suggerisci 1-2 impostazioni tecniche (es. tempo di scatto, apertura, ISO) o scelte compositive concrete (es. angolazione, prospettiva) che avrebbero migliorato drasticamente l'immagine, basandoti specificamente sull'analisi dei difetti appena effettuata.
 
 2. Critica Artistica e Contesto Storico (Mancanza di Voce)
@@ -205,6 +205,13 @@ const App = () => {
           return;
       }
       
+      // Controlla dimensioni totali
+      const totalSize = newFiles.reduce((sum, file) => sum + file.size, 0);
+      if (totalSize > 10 * 1024 * 1024) { // 10MB totale
+        setError(`Le immagini sono troppo pesanti (${(totalSize / (1024*1024)).toFixed(1)}MB). Carica immagini più piccole o meno foto.`);
+        return;
+      }
+      
       if (mode === 'curator' && newFiles.length < selectionCount) {
           setError(`Per la modalità Curatore devi caricare almeno ${selectionCount} foto.`);
       } else {
@@ -240,6 +247,68 @@ const App = () => {
     };
   };
 
+  const compressImage = async (file: File, maxSizeMB = 0.8): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        const img = new Image();
+        
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Riduci a max 1024px sul lato più lungo
+          const MAX_DIMENSION = 1024;
+          if (width > height && width > MAX_DIMENSION) {
+            height = Math.round((height * MAX_DIMENSION) / width);
+            width = MAX_DIMENSION;
+          } else if (height > MAX_DIMENSION) {
+            width = Math.round((width * MAX_DIMENSION) / height);
+            height = MAX_DIMENSION;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Converti in JPEG con qualità 80%
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Compression failed'));
+                return;
+              }
+              
+              // Controlla se è sotto il limite
+              if (blob.size > maxSizeMB * 1024 * 1024) {
+                // Se è ancora troppo grande, ricomprimi con qualità minore
+                resolve(compressImage(new File([blob], file.name, { type: 'image/jpeg' }), maxSizeMB));
+              } else {
+                const compressedFile = new File([blob], file.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now()
+                });
+                resolve(compressedFile);
+              }
+            },
+            'image/jpeg',
+            0.8 // Qualità 80%
+          );
+        };
+        
+        img.onerror = reject;
+        img.src = event.target?.result as string;
+      };
+      
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+  
   const analyzePhoto = async () => {
     if (images.length === 0) return;
 
@@ -253,11 +322,27 @@ const App = () => {
     setAnalysis(null);
 
     try {
+      // 1. COMPRESSIONE IMMAGINI
+      const compressedImages = await Promise.all(
+        images.map(file => {
+          // Comprimi solo se > 0.5MB
+          if (file.size > 0.5 * 1024 * 1024) {
+            return compressImage(file);
+          }
+          return Promise.resolve(file);
+        })
+      );
+      
+      // 2. INIZIALIZZA GOOGLE AI
       const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GOOGLE_API_KEY });
-      const model = 'gemini-2.5-flash';
       
-      const imageParts = await Promise.all(images.map(file => fileToGenerativePart(file)));
+      // 3. USA MODELLO PIÙ STABILE
+      const model = 'gemini-1.5-flash'; // Cambiato da gemini-2.5-flash
       
+      // 4. PREPARA IMMAGINI
+      const imageParts = await Promise.all(compressedImages.map(file => fileToGenerativePart(file)));
+      
+      // 5. PREPARA PROMPT
       let finalPrompt = "";
       
       if (mode === 'editing') {
@@ -274,6 +359,10 @@ const App = () => {
                         `\n\n[MODALITÀ ATTIVA: IMMAGINE SINGOLA]. Ho caricato 1 immagine. Analizza seguendo le istruzioni per 'Analisi di Immagine Singola'.`;
       }
 
+      // 6. ATTENDI 1 SECONDO PER EVITARE RATE LIMIT
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // 7. CHIAMA L'API
       const response = await ai.models.generateContent({
         model: model,
         contents: {
@@ -287,7 +376,17 @@ const App = () => {
       setAnalysis(response.text || "Nessuna analisi generata.");
     } catch (err: any) {
       console.error("Error analyzing photo:", err);
-      setError("Si è verificato un errore durante l'analisi. Riprova più tardi o controlla la tua connessione.");
+      
+      // Gestione errori specifici
+      if (err.message?.includes('503') || err.message?.includes('overloaded')) {
+        setError("Il servizio AI è temporaneamente sovraccarico. Riprova tra 30 secondi.");
+      } else if (err.message?.includes('429')) {
+        setError("Troppe richieste in poco tempo. Attendi un minuto e riprova.");
+      } else if (err.message?.includes('API Key')) {
+        setError("Problema con la chiave API. Controlla le variabili d'ambiente su Vercel.");
+      } else {
+        setError("Si è verificato un errore durante l'analisi. Riprova più tardi o controlla la tua connessione.");
+      }
     } finally {
       setLoading(false);
     }
@@ -468,8 +567,9 @@ const App = () => {
                   </p>
 
                   <p className="text-xs text-gray-600 mt-6 font-medium uppercase tracking-wide">
-                    {mode === 'single' || mode === 'editing' ? "JPG, PNG fino a 10MB" : mode === 'curator' ? `Seleziona più di ${selectionCount} immagini` : "Seleziona più immagini"}
+                    {mode === 'single' || mode === 'editing' ? "JPG, PNG (consigliato < 2MB)" : mode === 'curator' ? `Seleziona più di ${selectionCount} immagini` : "Seleziona più immagini"}
                   </p>
+                  <p className="text-xs text-gray-500 mt-2">Le immagini grandi saranno compresse automaticamente</p>
                 </div>
               ) : (
                 <div className="relative group bg-black rounded-xl overflow-hidden min-h-[384px] flex items-center justify-center">
@@ -589,7 +689,7 @@ const App = () => {
                       <h2 className="text-2xl font-bold text-white">
                           {mode === 'single' ? "Analisi Completa" : mode === 'curator' ? "Selezione Mostra" : mode === 'editing' ? "Scheda Editing" : "Analisi Progetto"}
                       </h2>
-                      <p className="text-sm text-gray-400">Gemini 2.5 • Visione {mode === 'curator' ? 'Curatoriale' : mode === 'editing' ? 'Tecnica' : 'Artistica'}</p>
+                      <p className="text-sm text-gray-400">Gemini 1.5 Flash • Visione {mode === 'curator' ? 'Curatoriale' : mode === 'editing' ? 'Tecnica' : 'Artistica'}</p>
                    </div>
                 </div>
                 
